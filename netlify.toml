@@ -1,0 +1,50 @@
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+  command = ""
+
+[functions]
+  node_bundler = "esbuild"
+  # 解析请求上游偶尔较慢，给足时间（Netlify 免费版函数上限 10s，Pro 26s）
+  included_files = ["netlify/functions/**"]
+
+[[redirects]]
+  from = "/parse"
+  to = "/.netlify/functions/parse"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/parse"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/ready"
+  to = "/.netlify/functions/parse"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/platforms"
+  to = "/.netlify/functions/parse"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/media/*"
+  to = "/.netlify/functions/parse"
+  status = 200
+  force = true
+
+# 其余路径（含 /）都交给同一个函数，函数内部返回首页 HTML 或接口响应
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/parse"
+  status = 200
+  force = true
+
+[build.environment]
+  BROWSER_FALLBACK = "off"
+  NODE_VERSION = "20"

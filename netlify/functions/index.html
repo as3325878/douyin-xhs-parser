@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#ff7a1a">
+<title>橙子解析</title>
+<style>
+  :root{
+    --orange:#ff7a1a; --orange-d:#f06a0a; --ink:#14171c; --sub:#8a929e;
+    --line:#eceff3; --bg:#f7f8fa; --card:#fff; --ok:#12a150; --err:#e5484d;
+    --safe-b:env(safe-area-inset-bottom,0px);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;overscroll-behavior-y:none;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;
+    padding-bottom:calc(20px + var(--safe-b));
+  }
+
+  /* 顶部栏 */
+  .top{
+    position:sticky;top:0;z-index:30;
+    background:linear-gradient(160deg,#ff9143 0%,var(--orange) 55%,#f4690a 100%);
+    color:#fff;padding:calc(14px + env(safe-area-inset-top,0px)) 20px 22px;
+    border-radius:0 0 22px 22px;
+    box-shadow:0 6px 22px rgba(255,122,26,.22);
+  }
+  .brand{display:flex;align-items:center;gap:9px;font-size:19px;font-weight:700;letter-spacing:.3px;}
+  .logo{
+    width:28px;height:28px;border-radius:9px;background:rgba(255,255,255,.22);
+    display:flex;align-items:center;justify-content:center;font-size:16px;
+  }
+  .slogan{font-size:12.5px;opacity:.9;margin-top:3px;font-weight:400;}
+
+  .wrap{padding:0 14px;margin-top:-8px;position:relative;z-index:10;}
+
+  /* 输入卡片 */
+  .card{background:var(--card);border-radius:18px;padding:16px;box-shadow:0 3px 16px rgba(20,23,28,.06);}
+  .card+.card{margin-top:12px;}
+
+  textarea{
+    width:100%;border:1.5px solid var(--line);border-radius:14px;
+    padding:13px 14px;font-size:15px;font-family:inherit;color:var(--ink);
+    background:#fafbfc;resize:none;min-height:86px;outline:none;
+    transition:border-color .18s,background .18s;line-height:1.55;
+  }
+  textarea:focus{border-color:var(--orange);background:#fff;}
+  textarea::placeholder{color:#b6bcc6;font-size:14px;}
+
+  .btns{display:flex;gap:10px;margin-top:12px;}
+  button{
+    border:0;font-family:inherit;font-size:16px;font-weight:600;border-radius:13px;
+    padding:14px 18px;cursor:pointer;transition:transform .1s,opacity .15s;
+  }
+  button:active{transform:scale(.975);}
+  .primary{
+    flex:1;background:linear-gradient(135deg,#ff8c3a,var(--orange));
+    color:#fff;box-shadow:0 4px 14px rgba(255,122,26,.3);
+  }
+  .primary:disabled{opacity:.55;box-shadow:none;}
+  .ghost{background:#f2f4f7;color:#4a525e;flex:0 0 auto;font-size:15px;padding:14px 16px;}
+
+  /* 平台标签 */
+  .plats{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px;}
+  .plats i{
+    font-style:normal;font-size:12px;padding:4px 11px;border-radius:8px;
+    background:#fff4ec;color:#c25a10;border:1px solid #ffe0c9;font-weight:500;
+  }
+  .plats i.no{background:#f4f5f7;color:#b0b7c1;border-color:#eceef1;}
+
+  /* 状态提示 */
+  #msg{display:none;margin-top:12px;padding:12px 14px;border-radius:13px;font-size:14px;line-height:1.5;}
+  #msg.show{display:block;}
+  #msg.ok{background:#eafaf0;color:#0a6b35;border:1px solid #c6ebd5;}
+  #msg.err{background:#fff0f0;color:#a11f24;border:1px solid #ffd6d7;}
+  #msg.load{background:#fff6ec;color:#a55a12;border:1px solid #ffe2c4;}
+  #msg.load:before{
+    content:'';display:inline-block;width:11px;height:11px;border-radius:50%;
+    border:2px solid #ffb673;border-top-color:#e07b14;
+    margin-right:8px;vertical-align:-1px;animation:spin .7s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* 结果 */
+  .result{display:none;margin-top:12px;}
+  .result.show{display:block;}
+  .head{display:flex;gap:12px;}
+  .cov{
+    width:88px;height:118px;border-radius:12px;object-fit:cover;flex:0 0 88px;
+    background:#eef1f5;box-shadow:0 2px 8px rgba(0,0,0,.07);
+  }
+  .hi{flex:1;min-width:0;display:flex;flex-direction:column;}
+  .tags{display:flex;gap:6px;margin-bottom:5px;flex-wrap:wrap;}
+  .tag{font-size:11px;font-weight:600;padding:2.5px 9px;border-radius:6px;background:#fff4ec;color:#d2620d;}
+  .tag.g{background:#eafaf0;color:#0d8a45;}
+  .ttl{
+    font-size:14.5px;font-weight:600;line-height:1.45;margin:0;color:var(--ink);
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .au{font-size:12.5px;color:var(--sub);margin-top:auto;padding-top:6px;}
+
+  .list{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+  .row{
+    display:flex;align-items:center;gap:11px;background:#fff;
+    border:1px solid var(--line);border-radius:14px;padding:11px 13px;
+  }
+  .row .ic{
+    width:36px;height:36px;border-radius:10px;background:#fff4ec;color:#f06a0a;
+    display:flex;align-items:center;justify-content:center;font-size:17px;flex:0 0 36px;
+  }
+  .row .tx{flex:1;min-width:0;}
+  .row .n{font-size:14px;font-weight:600;}
+  .row .d{font-size:11.5px;color:var(--sub);margin-top:1px;}
+  .row a{
+    flex:0 0 auto;background:linear-gradient(135deg,#ff8c3a,var(--orange));color:#fff;
+    text-decoration:none;font-size:13.5px;font-weight:600;padding:9px 17px;border-radius:10px;
+    box-shadow:0 3px 10px rgba(255,122,26,.26);
+  }
+  .row a:active{opacity:.85;}
+
+  .hint{font-size:12.5px;color:var(--sub);text-align:center;margin:16px 6px 0;line-height:1.7;}
+
+  /* 底部说明 */
+  .foot{
+    text-align:center;font-size:11.5px;color:#a8b0bb;padding:22px 20px 8px;line-height:1.7;
+  }
+
+  /* 历史 */
+  .hwrap{margin-top:12px;}
+  .htitle{font-size:13px;color:var(--sub);margin:0 4px 8px;display:flex;justify-content:space-between;}
+  .htitle span:last-child{color:var(--orange);font-size:12px;}
+  .hitem{
+    display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #f2f4f7;
+  }
+  .hitem:last-child{border-bottom:none;}
+  .hitem img{width:34px;height:44px;border-radius:7px;object-fit:cover;flex:0 0 34px;background:#eef1f5;}
+  .hitem .ht{
+    flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .hitem .hp{font-size:11px;color:var(--sub);}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><span class="logo">🍊</span>橙子解析</div>
+  <div class="slogan">粘贴链接，一键取无水印原片</div>
+</div>
+
+<div class="wrap">
+
+  <div class="card">
+    <textarea id="inp" placeholder="① 在抖音/快手/小红书点「分享」→「复制链接」&#10;② 回到这里粘贴，整段文字也行"></textarea>
+    <div class="btns">
+      <button class="ghost" id="pasteBtn">粘贴</button>
+      <button class="primary" id="goBtn">开始解析</button>
+    </div>
+    <div class="plats" id="plats"></div>
+  </div>
+
+  <div id="msg"></div>
+
+  <div class="card result" id="result">
+    <div class="head">
+      <img class="cov" id="cov" alt="">
+      <div class="hi">
+        <div class="tags"><span class="tag" id="tagPlat"></span><span class="tag g" id="tagKind"></span></div>
+        <p class="ttl" id="ttl"></p>
+        <div class="au" id="au"></div>
+      </div>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <div class="hwrap" id="hwrap" style="display:none">
+    <div class="htitle"><span>最近解析</span><span id="hclear">清空</span></div>
+    <div class="card" id="hlist" style="padding:6px 16px"></div>
+  </div>
+
+  <p class="hint" id="hint">解析后的地址有时效，想存就趁现在</p>
+
+</div>
+
+<div class="foot">
+  仅供个人学习与收藏使用<br>请勿用于商业用途或二次传播
+</div>
+
+<script>
+const API = location.origin;
+const $ = id => document.getElementById(id);
+const HD = 'orange_hist_v1';
+
+/* ---------------- 状态检测 ---------------- */
+let alive = false;
+async function ping(){
+  try{
+    const r = await fetch(API + '/health', {cache:'no-store'});
+    const d = await r.json();
+    alive = d.status === 'ok';
+  }catch(e){ alive = false; }
+  if(!alive) show('err','没连上解析服务，请确认电脑上的「启动.bat」还开着');
+}
+ping();
+setInterval(ping, 20000);
+
+/* ---------------- 平台列表 ---------------- */
+const NAMES = {
+  douyin:'抖音', kuaishou:'快手', xhs:'小红书', bilibili:'B站',
+  weibo:'微博', tiktok:'TikTok', youtube:'YouTube', twitter:'X', instagram:'Instagram'
+};
+async function loadPlats(){
+  try{
+    const r = await fetch(API + '/platforms');
+    const d = await r.json();
+    const arr = d.data || d.platforms || [];
+    const ids = arr.map(x => typeof x === 'string' ? x : (x.platform || '')).filter(Boolean);
+    $('plats').innerHTML = ids
+      .map(id => `<i>${NAMES[id] || id}</i>`).join('');
+  }catch(e){
+    $('plats').innerHTML = Object.values(NAMES).map(n => `<i>${n}</i>`).join('');
+  }
+}
+loadPlats();
+
+/* ---------------- 工具 ---------------- */
+function show(t, text){
+  const m = $('msg');
+  m.className = 'show ' + t;
+  m.textContent = text;
+}
+function hideMsg(){ $('msg').className = ''; }
+
+function extract(text){
+  const m = String(text).match(/https?:\/\/[^\s"'（）【】\[\]，,]+/);
+  return m ? m[0] : '';
+}
+
+const ERR = {
+  UNSUPPORTED_PLATFORM:'这个平台暂不支持，或链接格式不对',
+  UNSUPPORTED_CONTENT:'这类内容暂不支持（如直播）',
+  CONTENT_NOT_FOUND:'视频不存在，可能被删或设为私密',
+  CONTENT_RESTRICTED:'作者限制了访问权限',
+  RISK_CONTROL:'平台临时风控，等 1–2 分钟再试',
+  UPSTREAM_ERROR:'平台接口异常，稍后重试',
+  UPSTREAM_TIMEOUT:'请求超时，检查网络后重试',
+  UPSTREAM_CHANGED:'平台改了规则，暂时解析不了',
+  INVALID_URL:'链接格式不对，重新复制一次',
+  RATE_LIMITED:'请求太频繁，歇一会儿',
+  INTERNAL:'服务出错了，重启一下「启动.bat」'
+};
+
+/* ---------------- 解析 ---------------- */
+async function go(){
+  const raw = $('inp').value.trim();
+  if(!raw){ show('err','先把分享链接粘贴进来'); return; }
+  const url = extract(raw);
+  if(!url){ show('err','没找到链接，检查是否完整复制'); return; }
+
+  $('goBtn').disabled = true;
+  $('goBtn').textContent = '解析中…';
+  show('load','正在解析，通常 1–3 秒');
+  $('result').className = 'card result';
+
+  try{
+    const r = await fetch(API + '/parse', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url})
+    });
+    const d = await r.json();
+
+    if(!d.success){
+      const c = d.error && d.error.code;
+      show('err', ERR[c] || (d.error && d.error.message) || '解析失败');
+      return;
+    }
+    hideMsg();
+    render(d.data);
+    saveHist(d.data, url);
+  }catch(e){
+    show('err','请求失败：' + e.message);
+  }finally{
+    $('goBtn').disabled = false;
+    $('goBtn').textContent = '开始解析';
+  }
+}
+
+/* ---------------- 渲染 ---------------- */
+function render(x){
+  $('tagPlat').textContent = NAMES[x.platform] || x.platform || '视频';
+  $('tagKind').textContent = x.kind === 'album' ? '图集' : '视频';
+  $('ttl').textContent = x.title || x.description || '（无标题）';
+
+  const a = x.author;
+  const an = a ? (a.name || a.nickname || a.uniqueId || '') : '';
+  $('au').textContent = an ? '@' + an : '';
+
+  let covUrl = x.cover;
+  if(covUrl && typeof covUrl === 'object') covUrl = covUrl.url;
+  if(!covUrl){
+    const c = (x.assets || []).find(i => i.type === 'cover');
+    covUrl = c && c.url;
+  }
+  if(covUrl){ $('cov').src = covUrl; $('cov').style.display=''; }
+  else { $('cov').style.display='none'; }
+
+  const box = $('list');
+  box.innerHTML = '';
+  const items = (x.assets || []).filter(i => i.type !== 'cover');
+  if(!items.length){
+    box.innerHTML = '<div class="row"><div class="tx"><div class="n">没有拿到可下载的资源</div><div class="d">换个链接试试</div></div></div>';
+  }
+  items.forEach((it, idx) => {
+    const isImg = it.type === 'image';
+    const isAudio = it.type === 'audio';
+    const label = isImg ? `图片 ${idx+1}` : isAudio ? '背景音乐' : '无水印视频';
+    const icon = isImg ? '🖼' : isAudio ? '🎵' : '🎬';
+    const v = (it.variants && it.variants[0]) || {};
+    const w = it.width || v.width, h = it.height || v.height;
+    const sz = it.size || v.size;
+    const parts = [];
+    if(w && h) parts.push(`${w}×${h}`);
+    if(sz) parts.push((sz/1048576).toFixed(1)+'MB');
+    const ext = (it.url.split('?')[0].split('.').pop() || '').toUpperCase();
+    if(ext && ext.length <= 4) parts.push(ext);
+
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `<div class="ic">${icon}</div>
+      <div class="tx"><div class="n">${label}</div><div class="d">${parts.join(' · ') || '点右侧下载'}</div></div>`;
+    const a2 = document.createElement('a');
+    a2.textContent = '下载';
+    a2.href = it.url;
+    a2.target = '_blank';
+    a2.rel = 'noopener';
+    a2.setAttribute('download','');
+    el.appendChild(a2);
+    box.appendChild(el);
+  });
+
+  $('result').className = 'card result show';
+  $('result').scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+/* ---------------- 历史 ---------------- */
+function getHist(){
+  try{ return JSON.parse(localStorage.getItem(HD) || '[]'); }catch(e){ return []; }
+}
+function saveHist(x, url){
+  let list = getHist();
+  list = list.filter(i => i.url !== url);
+  let cov = x.cover;
+  if(cov && typeof cov === 'object') cov = cov.url;
+  list.unshift({
+    url, t: (x.title || '').slice(0, 40),
+    p: NAMES[x.platform] || x.platform, c: cov || '', ts: Date.now()
+  });
+  list = list.slice(0, 12);
+  localStorage.setItem(HD, JSON.stringify(list));
+  drawHist();
+}
+function drawHist(){
+  const list = getHist();
+  if(!list.length){ $('hwrap').style.display = 'none'; return; }
+  $('hwrap').style.display = '';
+  const box = $('hlist');
+  box.innerHTML = '';
+  list.forEach(i => {
+    const d = document.createElement('div');
+    d.className = 'hitem';
+    d.innerHTML = `${i.c ? `<img src="${i.c}" alt="">` : '<img alt="">'}
+      <div class="ht">${i.t || '(无标题)'}<div class="hp">${i.p || ''}</div></div>`;
+    d.onclick = () => {
+      $('inp').value = i.url;
+      window.scrollTo({top:0, behavior:'smooth'});
+      setTimeout(go, 260);
+    };
+    box.appendChild(d);
+  });
+}
+$('hclear').onclick = () => {
+  localStorage.removeItem(HD);
+  drawHist();
+};
+drawHist();
+
+/* ---------------- 事件 ---------------- */
+$('goBtn').onclick = go;
+$('pasteBtn').onclick = async () => {
+  try{
+    const t = await navigator.clipboard.readText();
+    if(t){ $('inp').value = t; }
+  }catch(e){
+    $('inp').focus();
+    show('err','浏览器不允许自动读剪贴板，请手动长按粘贴');
+  }
+};
+$('inp').addEventListener('input', () => {
+  // 输入里已含链接就撤掉错误提示
+  if($('msg').className === 'show err' && extract($('inp').value)) hideMsg();
+});
+
+// 自动尝试读剪贴板（首次）
+(async () => {
+  try{
+    if(navigator.permissions){
+      const st = await navigator.permissions.query({name:'clipboard-read'});
+      if(st.state === 'granted'){
+        const t = await navigator.clipboard.readText();
+        if(t && extract(t) && !$('inp').value) $('inp').value = t;
+      }
+    }
+  }catch(e){}
+})();
+</script>
+</body>
+</html>

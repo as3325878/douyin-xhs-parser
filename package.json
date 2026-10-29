@@ -1,0 +1,8 @@
+{
+  "name": "video-download-helper",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "dependencies": { "pino": "^9.14.0" }
+}
