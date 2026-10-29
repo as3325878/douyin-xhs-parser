@@ -19542,15 +19542,20 @@ function y(n, e) {
   let t = e - n;
   if (t <= 0)
     return n;
-  let r = globalThis.crypto;
-  if (r?.getRandomValues) {
-    let o = new Uint32Array(1), a = Math.floor(4294967296 / t) * t, i;
-    do
-      r.getRandomValues(o), i = o[0];
-    while (i >= a);
-    return n + i % t;
+  try {
+    let r = globalThis.crypto;
+    if (r?.getRandomValues) {
+      let o = new Uint32Array(1), a = Math.floor(4294967296 / t) * t, i;
+      do
+        r.getRandomValues(o), i = o[0];
+      while (i >= a);
+      return n + i % t;
+    }
+  } catch (err) {
   }
-  return n + Math.floor(Math.random() * t);
+  let __s = (Date.now() % 2147483647) || 1;
+  __s = (__s * 48271 + 11) % 2147483647;
+  return n + __s % t;
 }
 new TextDecoder("latin1");
 function j(n) {
