@@ -2,13 +2,20 @@
 
 粘贴短视频分享链接，解析无水印原片。纯服务端解析，单文件函数，部署即用。
 
-## 部署到 Netlify（约 3 分钟）
+## 一键部署（点这个链接）
 
-1. 打开 https://app.netlify.com 用 GitHub 账号登录
-2. **Add new site** → **Import an existing project** → **GitHub**
-3. 选择本仓库 `douyin-xhs-parser`
-4. 构建设置保持默认（`netlify.toml` 已配好），点 **Deploy**
-5. 约 1 分钟完成，得到 `xxx.netlify.app` 网址
+https://app.netlify.com/start/deploy?repository=https://github.com/as3325878/douyin-xhs-parser
+
+点进去后的流程：
+
+1. 如果没登录，先用 GitHub 账号登录 / 授权 Netlify 读取仓库（只需一次）
+2. 页面会显示仓库信息，直接点 **Deploy**，不用改任何配置
+3. 等约 1 分钟，页面顶部给出 `https://xxx.netlify.app` 链接，这个就是你自己的网址
+
+### 手动部署（不用按钮时）
+
+1. 打开 https://app.netlify.com → **Add new site** → **Import an existing project** → **GitHub**
+2. 选仓库 `douyin-xhs-parser` → 构建配置保持默认 → **Deploy**
 
 ## 接口
 
