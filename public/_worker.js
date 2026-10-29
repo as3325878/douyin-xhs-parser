@@ -39,6 +39,8 @@ button:active{transform:scale(.98)}
 .dl.alt{background:#eef0f3;color:#16181d}
 .playbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#16181d;border:1.4px solid #d7dbe1;border-radius:11px;padding:10px 14px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
 .playbtn span{font-weight:400;opacity:.5;font-size:12.5px}
+.playbtn[disabled]{opacity:.55;cursor:default}
+.prow{display:flex;margin-top:10px}
 .playbtn.on{background:#16181d;color:#fff;border-color:#16181d}
 .player{margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
 .player video{display:block;width:100%;max-height:62vh;background:#000}
@@ -199,7 +201,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
       }
       var playUrl = v.url || (vs[0] && vs[0].url) || '';
       if (playUrl) {
-        html += '<button class="playbtn" type="button" data-u="' + esc(playUrl) + '" data-p="' + esc(v.coverUrl || '') + '">▶ 页面播放<span>长按存相册</span></button>';
+        html += '<button class="playbtn" type="button" data-u="' + esc(playUrl) + '" data-p="' + esc(v.coverUrl || '') + '" data-n="' + esc(proxyName(d.title, 'origin')) + '">▶ 页面播放<span>长按存相册</span></button>';
       }
       html += '</div>';
       if (d.expiresAt) {
@@ -237,7 +239,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
       .then(function () { go.disabled = false; go.textContent = '点这里下载'; });
   }
 
-  // 页面内播放：iOS 上长按正在播放的视频可直接「存储视频」存进相册
+  // 页面内播放：优先「一键存相册」（系统分享面板），长按作为备用路径
   out.addEventListener('click', function (e) {
     var target = e.target;
     var b = target && target.closest ? target.closest('.playbtn') : null;
@@ -257,9 +259,11 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     b.className = 'playbtn on';
 
     var btns = b.parentNode;
+    var box = document.createElement('div');
+    box.id = 'player';
+
     var wrap = document.createElement('div');
     wrap.className = 'player';
-    wrap.id = 'player';
 
     var vd = document.createElement('video');
     vd.src = '/stream?u=' + encodeURIComponent(u);
@@ -271,21 +275,73 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     var poster = b.getAttribute('data-p') || '';
     if (poster) vd.setAttribute('poster', poster);
     wrap.appendChild(vd);
+    box.appendChild(wrap);
+
+    var fname = b.getAttribute('data-n') || 'video.mp4';
+
+    // 一键存相册：拉取视频后调起系统分享面板，iPhone 面板里有「存储视频」
+    var canShareFiles = false;
+    try {
+      if (navigator.canShare) {
+        canShareFiles = navigator.canShare({ files: [new File([new Blob(['x'])], 't.mp4', { type: 'video/mp4' })] });
+      }
+    } catch (err0) { canShareFiles = false; }
+
+    if (canShareFiles) {
+      var prow = document.createElement('div');
+      prow.className = 'prow';
+      var sb = document.createElement('button');
+      sb.type = 'button';
+      sb.className = 'playbtn';
+      sb.textContent = '⤓ 一键存相册';
+      prow.appendChild(sb);
+      box.appendChild(prow);
+
+      var busy = false;
+      sb.addEventListener('click', function () {
+        if (busy) return;
+        busy = true;
+        sb.disabled = true;
+        sb.textContent = '正在获取视频…';
+        fetch('/stream?u=' + encodeURIComponent(u))
+          .then(function (r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.blob();
+          })
+          .then(function (blob) {
+            var f = new File([blob], fname, { type: 'video/mp4' });
+            if (!(navigator.canShare && navigator.canShare({ files: [f] }))) throw new Error('NO_SHARE');
+            return navigator.share({ files: [f], title: fname });
+          })
+          .then(function () {
+            toast('在弹出的面板里点「存储视频」即可进相册');
+          })
+          .catch(function () {
+            toast('分享没有完成，可长按视频画面 → 存储视频');
+          })
+          .then(function () {
+            busy = false;
+            sb.disabled = false;
+            sb.textContent = '⤓ 一键存相册';
+          });
+      });
+    }
 
     var tip = document.createElement('p');
     tip.className = 'ptip';
-    tip.innerHTML = 'iPhone：长按上面的视频 → 选「<b>存储视频</b>」即可直接存进相册；安卓：点视频右下角「⋮」→「下载」。';
-    wrap.appendChild(tip);
+    tip.innerHTML = canShareFiles
+      ? 'iPhone：点上面「<b>一键存相册</b>」，在弹出的面板里选「<b>存储视频</b>」直接进相册。<br>安卓：点视频右下角「⋮」→「下载」。'
+      : 'iPhone：长按视频<b>画面</b>（避开进度条）→ 选「存储视频」；安卓：点视频右下角「⋮」→「下载」。';
+    box.appendChild(tip);
 
-    btns.parentNode.insertBefore(wrap, btns.nextSibling);
-    btns.parentNode.insertBefore(tip, wrap.nextSibling);
+    btns.parentNode.insertBefore(box, btns.nextSibling);
 
     vd.addEventListener('error', function () {
       tip.innerHTML = '视频加载失败，直链可能已过期，请回到上面重新点一次下载按钮。';
     });
     try { vd.play(); } catch (err) {}
     setTimeout(function () {
-      try { wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err2) {}
+      try { box.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err2) {}
     }, 120);
   });
 
