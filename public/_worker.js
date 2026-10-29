@@ -37,6 +37,13 @@ button:active{transform:scale(.98)}
 .dl{display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#16181d;color:#fff;border-radius:11px;padding:11px 14px;font-size:14px;font-weight:600}
 .dl span{font-weight:400;opacity:.72;font-size:12.5px}
 .dl.alt{background:#eef0f3;color:#16181d}
+.playbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#16181d;border:1.4px solid #d7dbe1;border-radius:11px;padding:10px 14px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
+.playbtn span{font-weight:400;opacity:.5;font-size:12.5px}
+.playbtn.on{background:#16181d;color:#fff;border-color:#16181d}
+.player{margin-top:12px;border-radius:12px;overflow:hidden;background:#000}
+.player video{display:block;width:100%;max-height:62vh;background:#000}
+.ptip{margin:9px 2px 0;font-size:12.5px;color:#6b7280;line-height:1.65}
+.ptip b{color:#16181d;font-weight:600}
 .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px}
 .grid a{display:block;border-radius:8px;overflow:hidden;background:#0f1115}
 .grid img{display:block;width:100%;aspect-ratio:1;object-fit:cover}
@@ -190,6 +197,10 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
         html += '<a class="dl' + (shown ? ' alt' : '') + '" href="' + esc(href) + '">下载 ' + esc(label) + '<span>' + bytes(x.size) + '</span></a>';
         shown++;
       }
+      var playUrl = v.url || (vs[0] && vs[0].url) || '';
+      if (playUrl) {
+        html += '<button class="playbtn" type="button" data-u="' + esc(playUrl) + '" data-p="' + esc(v.coverUrl || '') + '">▶ 页面播放<span>长按存相册</span></button>';
+      }
       html += '</div>';
       if (d.expiresAt) {
         var t = new Date(d.expiresAt * 1000);
@@ -225,6 +236,57 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
       .catch(function () { showMsg('网络异常，请重试'); })
       .then(function () { go.disabled = false; go.textContent = '点这里下载'; });
   }
+
+  // 页面内播放：iOS 上长按正在播放的视频可直接「存储视频」存进相册
+  out.addEventListener('click', function (e) {
+    var target = e.target;
+    var b = target && target.closest ? target.closest('.playbtn') : null;
+    if (!b) return;
+    var u = b.getAttribute('data-u') || '';
+    if (!u) return;
+
+    var old = document.getElementById('player');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+
+    if (b.getAttribute('data-on') === '1') {
+      b.setAttribute('data-on', '0');
+      b.className = 'playbtn';
+      return;
+    }
+    b.setAttribute('data-on', '1');
+    b.className = 'playbtn on';
+
+    var btns = b.parentNode;
+    var wrap = document.createElement('div');
+    wrap.className = 'player';
+    wrap.id = 'player';
+
+    var vd = document.createElement('video');
+    vd.src = '/stream?u=' + encodeURIComponent(u);
+    vd.controls = true;
+    vd.setAttribute('playsinline', '');
+    vd.setAttribute('webkit-playsinline', '');
+    vd.setAttribute('x5-playsinline', '');
+    vd.setAttribute('preload', 'metadata');
+    var poster = b.getAttribute('data-p') || '';
+    if (poster) vd.setAttribute('poster', poster);
+    wrap.appendChild(vd);
+
+    var tip = document.createElement('p');
+    tip.className = 'ptip';
+    tip.innerHTML = 'iPhone：长按上面的视频 → 选「<b>存储视频</b>」即可直接存进相册；安卓：点视频右下角「⋮」→「下载」。';
+    wrap.appendChild(tip);
+
+    btns.parentNode.insertBefore(wrap, btns.nextSibling);
+
+    vd.addEventListener('error', function () {
+      tip.innerHTML = '视频加载失败，直链可能已过期，请回到上面重新点一次下载按钮。';
+    });
+    try { vd.play(); } catch (err) {}
+    setTimeout(function () {
+      try { wrap.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (err2) {}
+    }, 120);
+  });
 
   go.addEventListener('click', run);
   q.addEventListener('keydown', function (e) {
@@ -300,6 +362,53 @@ function isAllowedTarget(u) {
   }
 }
 
+async function proxyMedia(request, url, inline) {
+  const target = url.searchParams.get('u') || '';
+  let name = url.searchParams.get('n') || 'video.mp4';
+  name = name.replace(/[\\\/:*?"<>|\r\n]/g, '_').slice(0, 90) || 'video.mp4';
+
+  if (!isAllowedTarget(target)) {
+    return json({ error: 'UNSUPPORTED_TARGET', message: '该地址不在允许下载的域名内' }, 400);
+  }
+
+  const headers = new Headers({
+    'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+    'referer': 'https://www.douyin.com/',
+    'accept': '*/*',
+    'accept-language': 'zh-CN,zh;q=0.9',
+  });
+  const range = request.headers.get('range');
+  if (range) headers.set('range', range);
+
+  let upstream;
+  try {
+    upstream = await fetch(target, { headers, redirect: 'follow' });
+  } catch (err) {
+    return json({ error: 'UPSTREAM_ERROR', message: String((err && err.message) || err) }, 502);
+  }
+
+  if (upstream.status === 403 || upstream.status === 401) {
+    return json({ error: 'LINK_EXPIRED', message: '直链已失效，请回到分析页重新分析' }, 502);
+  }
+  if (!upstream.ok && upstream.status !== 206) {
+    return json({ error: 'UPSTREAM_ERROR', message: '上游返回 ' + upstream.status }, 502);
+  }
+
+  const out = new Headers();
+  for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) {
+    const v = upstream.headers.get(h);
+    if (v) out.set(h, v);
+  }
+  // 播放模式不设 attachment，否则 iOS/微信会把它当成文件而不给 <video> 播
+  if (!inline) {
+    out.set('content-disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(name));
+  }
+  if (!out.get('content-type')) out.set('content-type', 'video/mp4');
+  out.set('cache-control', 'no-store');
+
+  return new Response(upstream.body, { status: upstream.status, headers: out });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -320,49 +429,11 @@ export default {
       return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
     }
 
-    // 下载代理：服务器端补齐 Referer/UA，绕过平台 CDN 的防盗链；
-    // 并以 attachment 头返回，让手机浏览器直接弹出“下载”而不是打开播放页
-    if (url.pathname === '/download') {
-      const target = url.searchParams.get('u') || '';
-      let name = url.searchParams.get('n') || 'video.mp4';
-      name = name.replace(/[\\\/:*?"<>|\r\n]/g, '_').slice(0, 90) || 'video.mp4';
-
-      if (!isAllowedTarget(target)) {
-        return json({ error: 'UNSUPPORTED_TARGET', message: '该地址不在允许下载的域名内' }, 400);
-      }
-
-      const headers = new Headers({
-        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-        'referer': 'https://www.douyin.com/',
-        'accept': '*/*',
-        'accept-language': 'zh-CN,zh;q=0.9',
-      });
-      const range = request.headers.get('range');
-      if (range) headers.set('range', range);
-
-      let upstream;
-      try {
-        upstream = await fetch(target, { headers, redirect: 'follow' });
-      } catch (err) {
-        return json({ error: 'UPSTREAM_ERROR', message: String((err && err.message) || err) }, 502);
-      }
-
-      if (upstream.status === 403 || upstream.status === 401) {
-        return json({ error: 'LINK_EXPIRED', message: '直链已失效，请回到分析页重新分析' }, 502);
-      }
-      if (!upstream.ok && upstream.status !== 206) {
-        return json({ error: 'UPSTREAM_ERROR', message: '上游返回 ' + upstream.status }, 502);
-      }
-
-      const out = new Headers();
-      for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) {
-        const v = upstream.headers.get(h);
-        if (v) out.set(h, v);
-      }
-      out.set('content-disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(name));
-      out.set('cache-control', 'no-store');
-
-      return new Response(upstream.body, { status: upstream.status, headers: out });
+    // 媒体代理：服务器端补齐 Referer/UA 绕过平台 CDN 的防盗链。
+    // /download 返回 attachment（浏览器直接存文件）；
+    // /stream 返回 inline（供页面内 <video> 播放，iOS 可长按「存储视频」进相册）
+    if (url.pathname === '/download' || url.pathname === '/stream') {
+      return proxyMedia(request, url, url.pathname === '/stream');
     }
 
     try {
