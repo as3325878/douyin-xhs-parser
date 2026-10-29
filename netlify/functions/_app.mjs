@@ -24101,10 +24101,14 @@ var opsRoutes = new Elysia().get("/health", () => ({ status: "ok", uptime: proce
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 function loadStatusPage() {
-  const candidates = [
-    new URL("./status.html", import.meta.url),
-    new URL("../../docs/status.html", import.meta.url)
-  ];
+  const candidates = [];
+  try {
+    candidates.push(
+      new URL("./status.html", import.meta.url),
+      new URL("../../docs/status.html", import.meta.url)
+    );
+  } catch (err) {
+  }
   for (const u of candidates) {
     try {
       return readFileSync(fileURLToPath(u), "utf8");
