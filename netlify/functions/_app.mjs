@@ -11442,27 +11442,49 @@ var TypeCompiler;
   }
   TypeCompiler.Code = Code;
   function Compile(schema, references = []) {
-    const generatedCode = Code(schema, references, { language: "javascript" });
-    const compiledFunction = Evaluate("kind", "format", "hash", generatedCode);
-    const instances = new Map(state.instances);
-    function typeRegistryFunction(kind, instance, value) {
-      if (!Has2(kind) || !instances.has(instance))
+    const KIND = Symbol.for("TypeBox.Kind");
+    const MOD = Symbol.for("TypeBox.Modifier");
+    function checkType(value, s) {
+      if (s === null || s === void 0)
+        return true;
+      if (value === undefined) {
+        if (s.anyOf)
+          return s.anyOf.some((x) => checkType(value, x));
+        if (s[MOD] === "Optional")
+          return true;
         return false;
-      const checkFunc = Get2(kind);
-      const schema = instances.get(instance);
-      return checkFunc(schema, value);
+      }
+      if (s.anyOf)
+        return s.anyOf.some((x) => checkType(value, x));
+      const kind = s[KIND];
+      switch (kind) {
+        case "Any":
+        case "Unknown":
+          return true;
+        case "Null":
+          return value === null;
+        case "Literal":
+          return value === s.const;
+        case "String":
+          return typeof value === "string";
+        case "Number":
+        case "Integer":
+          return typeof value === "number" && Number.isFinite(value);
+        case "Boolean":
+          return typeof value === "boolean";
+        case "Array":
+          return Array.isArray(value) && (!s.items || value.every((v) => checkType(v, s.items)));
+        case "Object": {
+          if (typeof value !== "object" || value === null || Array.isArray(value))
+            return false;
+          const props = s.properties || {};
+          return Object.keys(props).every((k) => checkType(value[k], props[k]));
+        }
+        default:/n          return true;
+      }
     }
-    function formatRegistryFunction(format, value) {
-      if (!Has(format))
-        return false;
-      const checkFunc = Get(format);
-      return checkFunc(value);
-    }
-    function hashFunction(value) {
-      return Hash(value);
-    }
-    const checkFunction = compiledFunction(typeRegistryFunction, formatRegistryFunction, hashFunction);
-    return new TypeCheck(schema, references, checkFunction, generatedCode);
+    const checkFunction = (value) => checkType(value, schema);
+    return new TypeCheck(schema, references, checkFunction, "/* jitless: no codegen on workers */");
   }
   TypeCompiler.Compile = Compile;
 })(TypeCompiler || (TypeCompiler = {}));
