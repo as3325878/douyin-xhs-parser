@@ -15338,7 +15338,7 @@ var getSchemaValidator = (s, {
             modules
           });
         } catch {
-          console.warn("Failed to create exactMirror. Please report the following code to https://github.com/elysiajs/elysia/issues"), console.warn(schema2), mirror = createCleaner(schema2);
+          void 0, console.warn(schema2), mirror = createCleaner(schema2);
         }
       const vali = getSchemaValidator(schema2, {
         models,
@@ -15477,7 +15477,7 @@ var getSchemaValidator = (s, {
               modules
             });
           } catch {
-            console.warn("Failed to create exactMirror. Please report the following code to https://github.com/elysiajs/elysia/issues"), console.warn(schema), validator.Clean = createCleaner(schema);
+            void 0, console.warn(schema), validator.Clean = createCleaner(schema);
           }
         else
           validator.Clean = createCleaner(schema);
@@ -15566,7 +15566,7 @@ var getSchemaValidator = (s, {
           modules
         });
       } catch {
-        console.warn("Failed to create exactMirror. Please report the following code to https://github.com/elysiajs/elysia/issues"), console.dir(schema, {
+        void 0, console.dir(schema, {
           depth: null
         }), compiled.Clean = createCleaner(schema);
       }
@@ -17998,7 +17998,7 @@ var _Elysia = class _Elysia {
     config.tags && (config.detail ? config.detail.tags = config.tags : config.detail = {
       tags: config.tags
     }), this.config = {
-      aot: env2.ELYSIA_AOT !== "false",
+      aot: false,
       nativeStaticResponse: true,
       encodeSchema: true,
       normalize: true,
