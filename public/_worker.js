@@ -7,7 +7,7 @@ const PAGE = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#ffffff">
-<title>无水印视频解析</title>
+<title>无水印视频下载</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
@@ -54,7 +54,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
 <div class="wrap">
   <div class="wx" id="wx">检测到你在微信内打开：微信经常无法直接下载文件。建议点右上角「···」，选择「在浏览器打开」后再下载。</div>
   <header>
-    <h1>无水印视频解析</h1>
+    <h1>无水印视频下载</h1>
     <p class="sub">粘贴分享链接或整段分享文案，粘进去后自动开始解析</p>
   </header>
 
@@ -62,7 +62,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     <textarea id="q" placeholder="例如：7.31 复制打开抖音，看看【xxx的作品】 https://v.douyin.com/xxxx/" autocomplete="off" spellcheck="false"></textarea>
     <div class="row">
       <button class="ghost" id="paste" type="button">粘贴</button>
-      <button class="primary" id="go" type="button">解析</button>
+      <button class="primary" id="go" type="button">点这里下载</button>
     </div>
   </section>
 
@@ -213,7 +213,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     showMsg('');
     out.innerHTML = '';
     go.disabled = true;
-    go.textContent = '解析中…';
+    go.textContent = '下载中…';
 
     fetch('/parse?url=' + encodeURIComponent(url), { headers: { accept: 'application/json' } })
       .then(function (r) { return r.json(); })
@@ -223,7 +223,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
         showMsg(ERR[code] || (j && j.error && j.error.message) || '解析失败，换个链接试试');
       })
       .catch(function () { showMsg('网络异常，请重试'); })
-      .then(function () { go.disabled = false; go.textContent = '解析'; });
+      .then(function () { go.disabled = false; go.textContent = '点这里下载'; });
   }
 
   go.addEventListener('click', run);
