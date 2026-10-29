@@ -5,6 +5,7 @@ const PAGE = `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#ffffff">
 <title>无水印视频解析</title>
 <style>
@@ -40,6 +41,10 @@ button:active{transform:scale(.98)}
 .grid a{display:block;border-radius:8px;overflow:hidden;background:#0f1115}
 .grid img{display:block;width:100%;aspect-ratio:1;object-fit:cover}
 .note{margin-top:12px;font-size:12.5px;color:#9aa1ac}
+.wx{margin:0 0 12px;background:#fff7e6;border:1px solid #ffe1a8;color:#8a5a00;font-size:13px;border-radius:12px;padding:10px 12px;line-height:1.6;display:none}
+.wx.on{display:block}
+.toast{position:fixed;left:50%;bottom:calc(56px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(20,22,28,.92);color:#fff;font-size:14px;padding:10px 16px;border-radius:10px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:82vw;text-align:center;z-index:9}
+.toast.on{opacity:1}
 footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-height:1.8}
 .dim{color:#aab1bb}
 .badge{display:inline-block;font-size:11.5px;background:#f1f2f4;color:#5b6472;border-radius:6px;padding:2px 7px;margin-right:6px;vertical-align:1px}
@@ -47,6 +52,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
 </head>
 <body>
 <div class="wrap">
+  <div class="wx" id="wx">检测到你在微信内打开：微信经常无法直接下载文件。建议点右上角「···」，选择「在浏览器打开」后再下载。</div>
   <header>
     <h1>无水印视频解析</h1>
     <p class="sub">粘贴分享链接或整段分享文案，直接取无水印原片</p>
@@ -124,6 +130,23 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     msg.className = t ? 'msg on' : 'msg';
   }
 
+  var toastEl = document.createElement('div');
+  toastEl.className = 'toast';
+  document.body.appendChild(toastEl);
+  var toastTimer = null;
+  function toast(t) {
+    toastEl.textContent = t;
+    toastEl.className = 'toast on';
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.className = 'toast'; }, 2800);
+  }
+
+  function proxyName(title, ratio) {
+    var ext = '.mp4';
+    var n = String(title || 'video').replace(/[\\\/:*?"<>|\s]+/g, ' ').trim().slice(0, 60) || 'video';
+    return n + ' ' + ratioLabel(ratio) + ext;
+  }
+
   function render(d) {
     var assets = d.assets || [];
     var html = '';
@@ -156,14 +179,15 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
 
       html += '<div class="btns">';
       var seen = {};
-      var vs = v.variants && v.variants.length ? v.variants : [{ ratio: '原画', url: v.url, size: v.size }];
+      var vs = v.variants && v.variants.length ? v.variants : [{ ratio: 'origin', url: v.url, size: v.size }];
       var shown = 0;
       for (var j = 0; j < vs.length && shown < 4; j++) {
         var x = vs[j];
         if (!x || !x.url || seen[x.url]) continue;
         seen[x.url] = 1;
         var label = x.ratio ? ratioLabel(x.ratio) : '原画';
-        html += '<a class="dl' + (shown ? ' alt' : '') + '" href="' + esc(x.url) + '" target="_blank" rel="noopener">下载 ' + esc(label) + '<span>' + bytes(x.size) + '</span></a>';
+        var href = '/download?u=' + encodeURIComponent(x.url) + '&n=' + encodeURIComponent(proxyName(d.title, x.ratio));
+        html += '<a class="dl' + (shown ? ' alt' : '') + '" href="' + esc(href) + '">下载 ' + esc(label) + '<span>' + bytes(x.size) + '</span></a>';
         shown++;
       }
       html += '</div>';
@@ -207,9 +231,23 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run();
   });
   past.addEventListener('click', function () {
-    if (!navigator.clipboard || !navigator.clipboard.readText) { q.focus(); return; }
-    navigator.clipboard.readText().then(function (t) { q.value = t; q.focus(); }).catch(function () { q.focus(); });
+    function fallback() {
+      q.focus();
+      toast('请在输入框长按，选择「粘贴」');
+    }
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) {
+        if (t && String(t).trim()) { q.value = String(t).trim(); q.focus(); }
+        else fallback();
+      }).catch(fallback);
+    } else {
+      fallback();
+    }
   });
+
+  if (/MicroMessenger/i.test(navigator.userAgent)) {
+    document.getElementById('wx').className = 'wx on';
+  }
 })();
 </script>
 </body>
@@ -220,6 +258,30 @@ const json = (obj, status) =>
     status: status || 200,
     headers: { 'content-type': 'application/json; charset=utf-8' },
   });
+
+// 仅允许代理主流平台的 CDN 域名，防止被当作开放代理滥用
+const CDN_HOSTS = [
+  'douyinvod.com', 'douyinpic.com', 'douyin.com', 'snssdk.com', 'zjcdn.com',
+  'ixigua.com', 'bytedance.com', 'toutiao.com',
+  'xhscdn.com', 'xiaohongshu.com',
+  'kwaicdn.com', 'gifshow.com', 'ksapisrv.com',
+  'bilivideo.com', 'hdslb.com', 'bilibili.com',
+  'weibocdn.com', 'miaopai.com',
+  'tiktokcdn.com', 'tiktokv.com', 'akamaized.net',
+  'cdninstagram.com', 'fbcdn.net',
+  'googlevideo.com', 'ytimg.com',
+];
+
+function isAllowedTarget(u) {
+  try {
+    const parsed = new URL(u);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+    const h = parsed.hostname;
+    return CDN_HOSTS.some((d) => h === d || h.endsWith('.' + d));
+  } catch {
+    return false;
+  }
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -239,6 +301,51 @@ export default {
 
     if (url.pathname === '/favicon.ico') {
       return new Response(null, { status: 204, headers: { 'cache-control': 'public, max-age=86400' } });
+    }
+
+    // 下载代理：服务器端补齐 Referer/UA，绕过平台 CDN 的防盗链；
+    // 并以 attachment 头返回，让手机浏览器直接弹出“下载”而不是打开播放页
+    if (url.pathname === '/download') {
+      const target = url.searchParams.get('u') || '';
+      let name = url.searchParams.get('n') || 'video.mp4';
+      name = name.replace(/[\\\/:*?"<>|\r\n]/g, '_').slice(0, 90) || 'video.mp4';
+
+      if (!isAllowedTarget(target)) {
+        return json({ error: 'UNSUPPORTED_TARGET', message: '该地址不在允许下载的域名内' }, 400);
+      }
+
+      const headers = new Headers({
+        'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'referer': 'https://www.douyin.com/',
+        'accept': '*/*',
+        'accept-language': 'zh-CN,zh;q=0.9',
+      });
+      const range = request.headers.get('range');
+      if (range) headers.set('range', range);
+
+      let upstream;
+      try {
+        upstream = await fetch(target, { headers, redirect: 'follow' });
+      } catch (err) {
+        return json({ error: 'UPSTREAM_ERROR', message: String((err && err.message) || err) }, 502);
+      }
+
+      if (upstream.status === 403 || upstream.status === 401) {
+        return json({ error: 'LINK_EXPIRED', message: '直链已失效，请回到解析页重新解析' }, 502);
+      }
+      if (!upstream.ok && upstream.status !== 206) {
+        return json({ error: 'UPSTREAM_ERROR', message: '上游返回 ' + upstream.status }, 502);
+      }
+
+      const out = new Headers();
+      for (const h of ['content-type', 'content-length', 'content-range', 'accept-ranges', 'etag', 'last-modified']) {
+        const v = upstream.headers.get(h);
+        if (v) out.set(h, v);
+      }
+      out.set('content-disposition', "attachment; filename*=UTF-8''" + encodeURIComponent(name));
+      out.set('cache-control', 'no-store');
+
+      return new Response(upstream.body, { status: upstream.status, headers: out });
     }
 
     try {
