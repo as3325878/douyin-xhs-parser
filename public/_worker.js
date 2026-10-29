@@ -55,7 +55,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
   <div class="wx" id="wx">检测到你在微信内打开：微信经常无法直接下载文件。建议点右上角「···」，选择「在浏览器打开」后再下载。</div>
   <header>
     <h1>无水印视频下载</h1>
-    <p class="sub">粘贴分享链接或整段分享文案，粘进去后自动开始解析</p>
+    <p class="sub">粘贴分享链接或整段分享文案，粘进去后自动开始分析</p>
   </header>
 
   <section class="card">
@@ -71,7 +71,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
 
   <footer>
     支持 抖音 · 快手 · B站 · 微博 · TikTok · YouTube 等<br>
-    <span class="dim">解析出的直链由平台签发，有时效，过期重新解析即可</span>
+    <span class="dim">分析出的直链由平台签发，有时效，过期重新分析即可</span>
   </footer>
 </div>
 
@@ -193,13 +193,13 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
       html += '</div>';
       if (d.expiresAt) {
         var t = new Date(d.expiresAt * 1000);
-        html += '<p class="note">直链有效期至 ' + t.toLocaleString('zh-CN', { hour12: false }) + '，过期重新解析</p>';
+        html += '<p class="note">直链有效期至 ' + t.toLocaleString('zh-CN', { hour12: false }) + '，过期重新分析</p>';
       }
       html += '</div></div>';
     }
 
     if (!html) {
-      html = '<div class="card res"><div class="body"><p class="meta">没有解析到可下载的内容</p></div></div>';
+      html = '<div class="card res"><div class="body"><p class="meta">没有分析到可下载的内容</p></div></div>';
     }
     out.innerHTML = html;
   }
@@ -220,7 +220,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
       .then(function (j) {
         if (j && j.success) { render(j.data); return; }
         var code = (j && j.error && j.error.code) || '';
-        showMsg(ERR[code] || (j && j.error && j.error.message) || '解析失败，换个链接试试');
+        showMsg(ERR[code] || (j && j.error && j.error.message) || '分析失败，换个链接试试');
       })
       .catch(function () { showMsg('网络异常，请重试'); })
       .then(function () { go.disabled = false; go.textContent = '点这里下载'; });
@@ -231,8 +231,8 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run();
   });
 
-  // 输入框一旦出现链接就自动解析（微信里无法自动读剪贴板，
-  // 用户长按粘贴完成后无需再点“解析”）
+  // 输入框一旦出现链接就自动分析（微信里无法自动读剪贴板，
+  // 用户长按粘贴完成后无需再点“分析”）
   var autoTimer = null;
   q.addEventListener('input', function () {
     if (autoTimer) clearTimeout(autoTimer);
@@ -245,7 +245,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
   past.addEventListener('click', function () {
     function fallback() {
       q.focus();
-      toast('已聚焦输入框：长按输入框选「粘贴」，松手后自动开始解析');
+      toast('已聚焦输入框：长按输入框选「粘贴」，松手后自动开始分析');
     }
     if (navigator.clipboard && navigator.clipboard.readText) {
       navigator.clipboard.readText().then(function (t) {
@@ -348,7 +348,7 @@ export default {
       }
 
       if (upstream.status === 403 || upstream.status === 401) {
-        return json({ error: 'LINK_EXPIRED', message: '直链已失效，请回到解析页重新解析' }, 502);
+        return json({ error: 'LINK_EXPIRED', message: '直链已失效，请回到分析页重新分析' }, 502);
       }
       if (!upstream.ok && upstream.status !== 206) {
         return json({ error: 'UPSTREAM_ERROR', message: '上游返回 ' + upstream.status }, 502);
