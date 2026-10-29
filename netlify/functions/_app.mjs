@@ -11441,7 +11441,7 @@ var TypeCompiler;
     return Build(schema, references, options);
   }
   TypeCompiler.Code = Code;
-  function Compile(schema, references = []) {
+    function Compile(schema, references = []) {
     const KIND = Symbol.for("TypeBox.Kind");
     const MOD = Symbol.for("TypeBox.Modifier");
     function checkType(value, s) {
@@ -11480,13 +11480,15 @@ var TypeCompiler;
           const props = s.properties || {};
           return Object.keys(props).every((k) => checkType(value[k], props[k]));
         }
-        default:/n          return true;
+        default:
+          return true;
       }
     }
     const checkFunction = (value) => checkType(value, schema);
     return new TypeCheck(schema, references, checkFunction, "/* jitless: no codegen on workers */");
   }
-  TypeCompiler.Compile = Compile;
+
+TypeCompiler.Compile = Compile;
 })(TypeCompiler || (TypeCompiler = {}));
 
 // node_modules/elysia/dist/universal/utils.mjs
