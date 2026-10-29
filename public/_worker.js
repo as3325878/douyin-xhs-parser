@@ -111,6 +111,14 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     return m + ':' + (s < 10 ? '0' : '') + s;
   }
 
+  function ratioLabel(r) {
+    var s = String(r || '');
+    if (/origin/i.test(s) || !s) return '原画';
+    var m = s.match(/(\\d{3,4})/);
+    if (m) return m[1] + 'p';
+    return s.replace(/[_-]+/g, ' ');
+  }
+
   function showMsg(t) {
     msg.textContent = t || '';
     msg.className = t ? 'msg on' : 'msg';
@@ -154,7 +162,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
         var x = vs[j];
         if (!x || !x.url || seen[x.url]) continue;
         seen[x.url] = 1;
-        var label = x.ratio ? String(x.ratio).replace(/_/g, ' ') : '原画';
+        var label = x.ratio ? ratioLabel(x.ratio) : '原画';
         html += '<a class="dl' + (shown ? ' alt' : '') + '" href="' + esc(x.url) + '" target="_blank" rel="noopener">下载 ' + esc(label) + '<span>' + bytes(x.size) + '</span></a>';
         shown++;
       }
