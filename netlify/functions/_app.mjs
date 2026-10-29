@@ -11470,13 +11470,7 @@ var TypeCompiler;
 // node_modules/elysia/dist/universal/utils.mjs
 var isBun = typeof Bun < "u";
 function isCloudflareWorker() {
-  try {
-    if (typeof caches < "u" && typeof caches.default < "u" || typeof WebSocketPair < "u")
-      return true;
-  } catch {
-    return false;
-  }
-  return false;
+  return true;
 }
 
 // node_modules/elysia/dist/universal/file.mjs
