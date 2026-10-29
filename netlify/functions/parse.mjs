@@ -1,8 +1,7 @@
 // Netlify Functions 入口：把 Lambda 风格 event 适配成 Web Request，交给打包好的 Elysia 应用。
 // 三个路由都由同一个应用处理：/（首页 HTML）、/health、/parse（以及 /ready /platforms /status /media）。
-import app from './_app.mjs';
-
-const runApp = app.default ?? app.handler ?? app;
+// _app.mjs 的默认导出就是一个 (Request) => Promise<Response> 的函数，直接用。
+import runApp from './_app.mjs';
 
 /** 判断是否文本内容（需要按文本返回，其余走 base64） */
 function isTextual(contentType) {
