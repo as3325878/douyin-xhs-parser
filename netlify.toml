@@ -5,40 +5,10 @@
 
 [functions]
   node_bundler = "esbuild"
-  # 解析请求上游偶尔较慢，给足时间（Netlify 免费版函数上限 10s，Pro 26s）
   included_files = ["netlify/functions/**"]
 
-[[redirects]]
-  from = "/parse"
-  to = "/.netlify/functions/parse"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/health"
-  to = "/.netlify/functions/parse"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/ready"
-  to = "/.netlify/functions/parse"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/platforms"
-  to = "/.netlify/functions/parse"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/media/*"
-  to = "/.netlify/functions/parse"
-  status = 200
-  force = true
-
-# 其余路径（含 /）都交给同一个函数，函数内部返回首页 HTML 或接口响应
+# 所有路径重写到同一个函数：/ /health /parse /platforms /ready /metrics /status /media/*
+# status=200 是 rewrite（浏览器地址栏不变，event.path 仍是原始路径）
 [[redirects]]
   from = "/*"
   to = "/.netlify/functions/parse"
