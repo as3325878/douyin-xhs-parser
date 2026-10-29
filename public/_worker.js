@@ -278,6 +278,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
     wrap.appendChild(tip);
 
     btns.parentNode.insertBefore(wrap, btns.nextSibling);
+    btns.parentNode.insertBefore(tip, wrap.nextSibling);
 
     vd.addEventListener('error', function () {
       tip.innerHTML = '视频加载失败，直链可能已过期，请回到上面重新点一次下载按钮。';
