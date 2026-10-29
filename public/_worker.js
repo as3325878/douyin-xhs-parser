@@ -55,7 +55,7 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
   <div class="wx" id="wx">检测到你在微信内打开：微信经常无法直接下载文件。建议点右上角「···」，选择「在浏览器打开」后再下载。</div>
   <header>
     <h1>无水印视频解析</h1>
-    <p class="sub">粘贴分享链接或整段分享文案，直接取无水印原片</p>
+    <p class="sub">粘贴分享链接或整段分享文案，粘进去后自动开始解析</p>
   </header>
 
   <section class="card">
@@ -230,15 +230,32 @@ footer{margin-top:26px;text-align:center;font-size:12.5px;color:#8b929e;line-hei
   q.addEventListener('keydown', function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') run();
   });
+
+  // 输入框一旦出现链接就自动解析（微信里无法自动读剪贴板，
+  // 用户长按粘贴完成后无需再点“解析”）
+  var autoTimer = null;
+  q.addEventListener('input', function () {
+    if (autoTimer) clearTimeout(autoTimer);
+    autoTimer = setTimeout(function () {
+      var v = extractUrl(q.value);
+      if (/^https?:/i.test(v) && !go.disabled) run();
+    }, 500);
+  });
+
   past.addEventListener('click', function () {
     function fallback() {
       q.focus();
-      toast('请在输入框长按，选择「粘贴」');
+      toast('已聚焦输入框：长按输入框选「粘贴」，松手后自动开始解析');
     }
     if (navigator.clipboard && navigator.clipboard.readText) {
       navigator.clipboard.readText().then(function (t) {
-        if (t && String(t).trim()) { q.value = String(t).trim(); q.focus(); }
-        else fallback();
+        if (t && String(t).trim()) {
+          q.value = String(t).trim();
+          q.focus();
+          run();
+        } else {
+          fallback();
+        }
       }).catch(fallback);
     } else {
       fallback();
